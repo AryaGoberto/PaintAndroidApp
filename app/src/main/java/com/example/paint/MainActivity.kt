@@ -7,7 +7,9 @@ import android.os.Build
 import androidx.compose.ui.graphics.Color
 import android.os.Bundle
 import android.Manifest
-
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.padding
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -20,15 +22,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
@@ -44,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -77,12 +84,10 @@ class MainActivity : ComponentActivity() {
 fun PaintApp() {
     val context = LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
-    var currentColor by remember {
-        mutableStateOf(Color.Black)
-    }
+    var currentColor by remember { mutableStateOf(Color.Black) }
     val lines = remember { mutableStateListOf<Line>() }
     var brushSize by remember { mutableStateOf(10f) }
-    var isEraser by remember { mutableStateOf(false) } // ✅ fixed boolean
+    var isEraser by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -98,24 +103,41 @@ fun PaintApp() {
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier
+        .fillMaxSize()
+        .padding(WindowInsets.systemBars.asPaddingValues())
+    ) {
+
+        // First row: color & brush selector
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(8.dp)
+                .horizontalScroll(rememberScrollState()),
             verticalAlignment = CenterVertically
         ) {
             ColorPicker { selectedColor ->
                 currentColor = selectedColor
                 isEraser = false
             }
-            brushSizeSelector(
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            BrushSizeSelector(
                 brushSize,
                 onSizeSelected = { selectedSize -> brushSize = selectedSize },
                 isEraser = isEraser,
                 keepMode = { keepEraserMode -> isEraser = keepEraserMode }
             )
+        }
+
+        // Second row: Eraser, Reset, Save
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
             Button(onClick = { isEraser = true }) {
                 Text("Eraser")
             }
@@ -131,7 +153,7 @@ fun PaintApp() {
             }
         }
 
-        // ✅ Canvas sebaiknya di luar Row
+        // Drawing Canvas
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -164,6 +186,7 @@ fun PaintApp() {
 
 
 
+
 @Composable
 fun ColorPicker(onColorSelected:(Color)->Unit) {
     val Context = LocalContext.current.applicationContext
@@ -171,7 +194,10 @@ fun ColorPicker(onColorSelected:(Color)->Unit) {
         Color.Red to "Red",
         Color.Green to "Green",
         Color.Blue to "Blue",
-        Color.Black to "Black"
+        Color.Black to "Black",
+        Color.Yellow to "Yellow",
+        Color.Cyan to "Cyan",
+        Color.Magenta to "Magenta",
     )
     Row{
         colorMap.forEach{(color, name)->
@@ -190,7 +216,7 @@ fun ColorPicker(onColorSelected:(Color)->Unit) {
 }
 
 @Composable
-fun brushSizeSelector(
+fun BrushSizeSelector(
     currentSize:Float,
     onSizeSelected:(Float)-> Unit,
     isEraser:Boolean,
