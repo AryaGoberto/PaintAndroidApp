@@ -3,6 +3,7 @@ package com.example.paint
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.compose.ui.graphics.Color
 import android.os.Bundle
 import android.provider.MediaStore
@@ -12,20 +13,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -37,6 +45,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.applyCanvas
 import com.example.paint.ui.theme.PaintTheme
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import java.io.OutputStream
 
 class MainActivity : ComponentActivity() {
@@ -52,9 +63,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PaintTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-
-                }
+               PaintApp()
             }
         }
     }
@@ -72,14 +81,79 @@ fun PaintApp() {
     var isEraser by remember { mutableFloatStateOf(10f) }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ){
-        granted->{
-            if(!granted){
-                Toast.makeText(context, "Require Permission", Toast.LENGTH_SHORT).show()
-            }
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(context, "Require Permission", Toast.LENGTH_SHORT).show()
+        }
     }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = CenterVertically
+        ) {
+            ColorPicker { selectedColor ->
+                currentColor = selectedColor
+                isEraser = false
+            }
+            brushSizeSelector(
+                brushSize,
+                onSizeSelected = { selectedSize -> brushSize = selectedSize },
+                isEraser = isEraser,
+                keepMode = { keepEraserMode -> isEraser = keepEraserMode }
+            )
+            Button(onClick = { isEraser = true }) {
+                Text("Eraser")
+            }
+            Button(onClick = { lines.clear() }) {
+                Text("Reset")
+            }
+            Button(onClick = {
+                coroutineScope.launch {
+                    saveDrawingToGallery(context, lines)
+                }
+            }) {
+                Text("Save")
+            }
+            Canvas(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .pointerInput(true){
+                    detectTapGestures { change, dragAmount->
+                        change.consume()
+                        val line = Line(
+                            start = change.position - dragAmount,
+                            end = change.position,
+                            color = if(isEraser) Color.White else currentColor,
+                            strokeWidth = brushSize
+                        )
+                        lines.add(line)
+                    }
+                }) {
+                lines.forEach{ line->
+                    drawLine(
+                        color = line.color,
+                        start = line.start,
+                        end = line.end,
+                        strokeWidth = line.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+
+                }
+            }
+        }
     }
 }
+
 
 @Composable
 fun ColorPicker(onColorSelected:(Color)->Unit) {
