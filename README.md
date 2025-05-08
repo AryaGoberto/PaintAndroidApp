@@ -35,4 +35,4 @@ A simple **Paint application** built with **Jetpack Compose** that allows users 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/AryaGoberto/SimplePaint_JetpackCompose.git
+   git clone https://github.com/AryaGoberto/PaintAndroidApp.git
