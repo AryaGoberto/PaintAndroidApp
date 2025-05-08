@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.ui.graphics.Color
 import android.os.Bundle
+import android.Manifest
+
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -16,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -77,8 +81,9 @@ fun PaintApp() {
         mutableStateOf(Color.Black)
     }
     val lines = remember { mutableStateListOf<Line>() }
-    val brushSize by remember { mutableStateOf(10f) }
-    var isEraser by remember { mutableFloatStateOf(10f) }
+    var brushSize by remember { mutableStateOf(10f) }
+    var isEraser by remember { mutableStateOf(false) } // ✅ fixed boolean
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -124,35 +129,39 @@ fun PaintApp() {
             }) {
                 Text("Save")
             }
-            Canvas(modifier = Modifier
+        }
+
+        // ✅ Canvas sebaiknya di luar Row
+        Canvas(
+            modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
-                .pointerInput(true){
-                    detectTapGestures { change, dragAmount->
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
                         change.consume()
                         val line = Line(
                             start = change.position - dragAmount,
                             end = change.position,
-                            color = if(isEraser) Color.White else currentColor,
+                            color = if (isEraser) Color.White else currentColor,
                             strokeWidth = brushSize
                         )
                         lines.add(line)
                     }
-                }) {
-                lines.forEach{ line->
-                    drawLine(
-                        color = line.color,
-                        start = line.start,
-                        end = line.end,
-                        strokeWidth = line.strokeWidth,
-                        cap = StrokeCap.Round
-                    )
-
                 }
+        ) {
+            lines.forEach { line ->
+                drawLine(
+                    color = line.color,
+                    start = line.start,
+                    end = line.end,
+                    strokeWidth = line.strokeWidth,
+                    cap = StrokeCap.Round
+                )
             }
         }
     }
 }
+
 
 
 @Composable
