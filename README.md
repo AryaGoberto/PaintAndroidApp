@@ -20,12 +20,8 @@ A simple **Paint application** built with **Jetpack Compose** that allows users 
 - **Coroutines** – For async image saving
 - **Activity Result API** – Runtime permission handling
 
-## Screenshots
-
-> You can add screenshots here for better preview  
-> Example:
-
-<img src="https://your-image-url.com/paint_screenshot.png" width="300" />
+## Demo Video
+<img src="https://your-image-url.com/paint_screenshot.png](https://github.com/AryaGoberto/PaintAndroidApp/blob/main/app/src/Demo/paintt.gif" height="350" />
 
 ## How to Run
 
