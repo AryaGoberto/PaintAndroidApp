@@ -17,7 +17,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -37,6 +39,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -58,6 +61,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -69,6 +73,7 @@ import kotlinx.coroutines.selects.select
 import java.io.OutputStream
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -80,14 +85,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun PaintApp() {
     val context = LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
     var currentColor by remember { mutableStateOf(Color.Black) }
     val lines = remember { mutableStateListOf<Line>() }
-    var brushSize by remember { mutableStateOf(10f) }
+    var brushSize by remember { mutableFloatStateOf(10f) }
     var isEraser by remember { mutableStateOf(false) }
+
+    //undo redo
+    val undoStack = remember{ mutableStateListOf<Line>()}
+    val redoStack = remember{ mutableStateListOf<Line>() }
+
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -139,10 +150,11 @@ fun PaintApp() {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(onClick = { isEraser = true }) {
-                Text("Eraser")
+                Image(painter = painterResource(R.drawable.eraser), contentDescription = "Eraser")
             }
             Button(onClick = { lines.clear() }) {
                 Text("Reset")
+
             }
             Button(onClick = {
                 coroutineScope.launch {
@@ -150,6 +162,24 @@ fun PaintApp() {
                 }
             }) {
                 Text("Save")
+            }
+            Button(onClick = {
+                if(lines.isNotEmpty()){
+                    val lastLine = lines.removeLast()
+                    undoStack.add(lastLine)
+                    redoStack.clear()
+                }
+            }) {
+                Image(painter = painterResource(R.drawable.undo) , contentDescription = "Undo")
+            }
+            Button(onClick = {
+                if(undoStack.isNotEmpty()){
+                    val lastUndone = undoStack.removeLast()
+                    lines.add(lastUndone)
+                }
+            }) {
+                Text("Redo")
+
             }
         }
 
@@ -183,9 +213,6 @@ fun PaintApp() {
         }
     }
 }
-
-
-
 
 @Composable
 fun ColorPicker(onColorSelected:(Color)->Unit) {
